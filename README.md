@@ -1,1 +1,1 @@
-# pbsc
+# Periodic Band Structure Calculation
