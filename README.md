@@ -1,2 +1,2 @@
-# Periodic Band Structure Calculation
+# BandCalQ
 Description
