@@ -20,6 +20,7 @@ class BandCalQ():
         self,
         orbital_number: int,
         backend: BackendV1,
+        hopping_matrix: np.ndarray,
         *,
         interacting_sites: int = 1,
         ansatz: QuantumCircuit | None=None, 
@@ -30,8 +31,13 @@ class BandCalQ():
         Args:
             ...
         """
-        #Implement initialization
-    
+        
+        self.orbital_number = orbital_number
+        self.backend = backend
+        self.hopping_matrix = hopping_matrix
+        self.interacting_sites = interacting_sites
+        self.ansatz = ansatz
+        self.optimizer = optimizer
         
     # Implement getters and setters
     #
