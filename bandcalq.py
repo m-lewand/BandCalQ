@@ -34,7 +34,7 @@ class BandCalQ():
     
         
     # Implement getters and setters
-
+    #
     # Methods to implement
     def hopping():
         ...
