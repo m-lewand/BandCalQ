@@ -64,23 +64,7 @@ class BandCalQ():
                     self.hopping(alpha, beta, delta)*cmt.exp(1j*k*delta*self.displacement) 
         return hamiltonian
 
-    @classmethod
-    def Operator_extended_one(operator, position, size):
-    #Returns PauliOp consisting of I's and operator on provided position
-        ext_op = I
-        for i in range(M):
-            if i == 0:
-                if i == position:
-                    ext_op = operator
-            elif i == position:
-                ext_op ^= operator
-            else:
-                ext_op ^= I
-        
-        return ext_op
 
-    @classmethod
-    
     def hamiltonian_to_qubit() -> None:
         ...
     
