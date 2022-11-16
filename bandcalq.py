@@ -69,11 +69,11 @@ class BandCalQ():
         cls,
         operator: PauliOp, 
         position: int, 
-        M: int,
+        size: int,
     ) -> PauliOp:
-        """Returns PauliOp consisting of I's and operator on provided position of size M"""
+        """Returns PauliOp consisting of I's and operator on provided position of given size"""
         ext_op = I
-        for i in range(M):
+        for i in range(size):
             if i == 0:
                 if i == position:
                     ext_op = operator
@@ -91,11 +91,11 @@ class BandCalQ():
         operator_2: PauliOp,
         position_1: int,
         position_2: int,
-        M: int,
+        size: int,
     ) -> PauliOp:
-        """Returns PauliOp consisting of I's, operator_1 on position_1 and operator_2 on position_2 of size M"""
+        """Returns PauliOp consisting of I's, operator_1 on position_1 and operator_2 on position_2 of given size"""
         ext_op = I
-        for i in range(M):
+        for i in range(size):
             if i == 0:
                 if i == position_1:
                     ext_op = operator_1
