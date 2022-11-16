@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import numpy as np
+import cmath as cmt
 
+from qiskit.opflow import Z, I, X, Y,
 from qiskit.algorithms.eigensolvers import VQD
 from qiskit.algorithms.minimum_eigensolvers import VQE
 from qiskit.algorithms.optimizers import Optimizer, Minimizer
@@ -19,8 +21,9 @@ class BandCalQ():
     def __init__(
         self,
         orbital_number: int,
-        backend: BackendV1,
+        displacement: float,
         hopping_matrix: np.ndarray,
+        backend: BackendV1,
         *,
         interacting_sites: int = 1,
         ansatz: QuantumCircuit | None=None, 
@@ -33,8 +36,9 @@ class BandCalQ():
         """
         
         self.orbital_number = orbital_number
-        self.backend = backend
+        self.displacement = displacement
         self.hopping_matrix = hopping_matrix
+        self.backend = backend
         self.interacting_sites = interacting_sites
         self.ansatz = ansatz
         self.optimizer = optimizer
@@ -42,13 +46,26 @@ class BandCalQ():
     # Implement getters and setters
     #
     # Methods to implement
-    def hopping():
-        ...
+    def hopping(
+        self,
+        alpha: int,
+        beta: int,
+        delta: float,
+    ) -> float:
+        return self.hopping_matrix[alpha][beta]
     
-    def create_hamiltonian():
-        ...
+    def create_hamiltonian(self, k) -> np.ndarray:
+        hamiltonian = np.zeros((self.orbital_number, self.orbital_number), dtype=complex)
+        for alpha in range(self.orbital_number):
+            for beta in range(self.orbital_number):
+                for delta in range(1, self.interacting_sites + 1):
+                    hamiltonian[alpha][beta] = hamiltonian[alpha][beta] + \
+                    self.hopping(alpha, beta, -delta)*cmt.exp(-1j*k*delta*self.displacement) + \
+                    self.hopping(alpha, beta, delta)*cmt.exp(1j*k*delta*self.displacement) 
+        return hamiltonian
 
-    def hamiltonian_to_qubit():
+
+    def hamiltonian_to_qubit() -> None:
         ...
     
     def compute_band_structure():
