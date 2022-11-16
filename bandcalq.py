@@ -27,7 +27,7 @@ class BandCalQ():
         *,
         interacting_sites: int = 1,
         ansatz: QuantumCircuit | None=None, 
-        optimizer: Optimizer | Minimizer | None=None  
+        optimizer: Optimizer | Minimizer | None=None, 
     ) -> None:
         """
         Description:
@@ -69,7 +69,8 @@ class BandCalQ():
         cls,
         operator: PauliOp, 
         position: int, 
-        M: int) -> PauliOp:
+        M: int,
+    ) -> PauliOp:
         """Returns PauliOp consisting of I's and operator on provided position of size M"""
         ext_op = I
         for i in range(M):
@@ -90,7 +91,8 @@ class BandCalQ():
         operator_2: PauliOp,
         position_1: int,
         position_2: int,
-        M: int):
+        M: int,
+    ) -> PauliOp:
         """Returns PauliOp consisting of I's, operator_1 on position_1 and operator_2 on position_2 of size M"""
         ext_op = I
         for i in range(M):
