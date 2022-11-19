@@ -130,8 +130,6 @@ class BandCalQ():
                 0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(X, Y, alpha, beta, self.orbital_number)) 
                 beta += 1
                 
-
-       
         return hamiltonian_qubit
     
     # Methods to implement   
