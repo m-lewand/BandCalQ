@@ -121,14 +121,17 @@ class BandCalQ():
             hamiltonian_qubit += 0.5*hamiltonian[alpha][alpha]*I_op
             hamiltonian_qubit -= 0.5*hamiltonian[alpha][alpha]*self.operator_extended_one(Z, alpha, self.orbital_number)
         
-        beta = alpha + 1
+            beta = alpha + 1
 
-        while(beta < self.orbital_number):
-            hamiltonian_qubit += 0.5*hamiltonian[alpha][beta].real*(self.operator_extended_two(X, X, alpha, beta, self.orbital_number)) + \
-            0.5*hamiltonian[alpha][beta].real*(self.operator_extended_two(Y, Y, alpha, beta, self.orbital_number)) + \
-            0.5*hamiltonian[alpha][beta].imag*(self.operator_extended_two(Y, X, alpha, beta, self.orbital_number)) - \
-            0.5*hamiltonian[alpha][beta].imag*(self.operator_extended_two(X, Y, alpha, beta, self.orbital_number)) 
+            while(beta < self.orbital_number):
+                hamiltonian_qubit += 0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(X, X, alpha, beta, self.orbital_number)) + \
+                0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(Y, Y, alpha, beta, self.orbital_number)) + \
+                0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(Y, X, alpha, beta, self.orbital_number)) - \
+                0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(X, Y, alpha, beta, self.orbital_number)) 
+                beta += 1
+                
 
+       
         return hamiltonian_qubit
     
     # Methods to implement   
