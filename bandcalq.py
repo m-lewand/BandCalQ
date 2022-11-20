@@ -112,7 +112,7 @@ class BandCalQ():
         
         return ext_op
     
-    def create_hamiltonian_qubit(self, momentum) -> None:
+    def create_hamiltonian_qubit(self, momentum: float) -> None:
         hamiltonian = self.create_hamiltonian(momentum)
         hamiltonian_qubit = 0
         I_op = I
@@ -152,8 +152,13 @@ class BandCalQ():
         
         return betas
 
-    def compute_band_structure():
-        ...
+    def compute_band_structure(self, momentum_range, momentum_points_amount):
+        dk = 2*momentum_range/(momentum_points_amount - 1)
+        momentum_array = np.zeros(momentum_points_amount)
+        for i in range(momentum_points_amount):
+            momentum_array[i] = -momentum_range + dk*i
+        
+        
     # Methods to implement 
     def plot_band_structure():
         ...
