@@ -7,10 +7,12 @@ import cmath as cmt
 from qiskit.opflow import Z, I, X, Y, PauliOp, PauliSumOp
 from qiskit.algorithms.eigensolvers import VQD
 from qiskit.algorithms.minimum_eigensolvers import VQE
-from qiskit.algorithms.optimizers import Optimizer, Minimizer
+from qiskit.algorithms.optimizers import Optimizer, Minimizer, SPSA
 from qiskit.circuit import QuantumCircuit
-from qiskit.circuit.library import EfficientSU2
+from qiskit.circuit.library import EfficientSU2, TwoLocal
 from qiskit.providers import BackendV1
+from qiskit.primitives import BackendEstimator, Sampler
+
 
 
 class BandCalQ():
@@ -110,7 +112,7 @@ class BandCalQ():
         
         return ext_op
     
-    def hamiltonian_to_qubit(self, momentum) -> PauliSumOp:
+    def create_hamiltonian_qubit(self, momentum) -> None:
         hamiltonian = self.create_hamiltonian(momentum)
         hamiltonian_qubit = 0
         I_op = I
@@ -130,11 +132,28 @@ class BandCalQ():
                 0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(X, Y, alpha, beta, self.orbital_number)) 
                 beta += 1
                 
-        return hamiltonian_qubit
+        self.hamiltonian_qubit = hamiltonian_qubit
+
+        return
     
-    # Methods to implement   
+    def get_betas(self):
+        quick_ansatz = TwoLocal(self.orbital_number , rotation_blocks='ry', entanglement_blocks='cz', reps=2)
+        quick_optimizer = SPSA(maxiter=50)
+        
+        vqe_algorithm = VQE(ansatz = quick_ansatz, estimator=BackendEstimator(self.backend), optimizer = quick_optimizer)
+
+        energy_min = vqe_algorithm.compute_minimum_eigenvalue(self.hamiltonian_qubit)
+        energy_max = vqe_algorithm.compute_minimum_eigenvalue(-self.hamiltonian_qubit)
+
+        betas = np.zeros([2*self.orbital_number])
+
+        for i in range(2*self.orbital_number):
+            betas[i] = 2*(energy_max - energy_min)
+        
+        return betas
+
     def compute_band_structure():
         ...
-
+    # Methods to implement 
     def plot_band_structure():
         ...
