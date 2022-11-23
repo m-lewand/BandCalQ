@@ -5,9 +5,14 @@ import numpy as np
 import cmath as cmt
 
 from qiskit.opflow import Z, I, X, Y, PauliOp, PauliSumOp
-from qiskit.algorithms.eigensolvers import VQD
+#from qiskit.algorithms.eigensolvers import VQD
+from vqd_fixed import VQD
+#
+from qiskit.algorithms.eigensolvers import NumPyEigensolver
+#
 from qiskit.algorithms.minimum_eigensolvers import VQE
 from qiskit.algorithms.optimizers import Optimizer, Minimizer, SPSA
+from qiskit.algorithms.state_fidelities import ComputeUncompute
 from qiskit.circuit import QuantumCircuit
 from qiskit.circuit.library import EfficientSU2, TwoLocal
 from qiskit.providers import BackendV1
@@ -127,11 +132,11 @@ class BandCalQ():
 
             while(beta < self.orbital_number):
                 hamiltonian_qubit += 0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(X, X, alpha, beta, self.orbital_number)) + \
-                0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(Y, Y, alpha, beta, self.orbital_number)) + \
+                0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(Y, Y, alpha, beta, self.orbital_number))# + \
                 0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(Y, X, alpha, beta, self.orbital_number)) - \
                 0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(X, Y, alpha, beta, self.orbital_number)) 
                 beta += 1
-                
+        
         self.hamiltonian_qubit = hamiltonian_qubit
 
         return
@@ -140,7 +145,9 @@ class BandCalQ():
         quick_ansatz = TwoLocal(self.orbital_number , rotation_blocks='ry', entanglement_blocks='cz', reps=2)
         quick_optimizer = SPSA(maxiter=50)
         
-        vqe_algorithm = VQE(ansatz = quick_ansatz, estimator=BackendEstimator(self.backend), optimizer = quick_optimizer)
+        initial_point = np.random.random(quick_ansatz.num_parameters)
+        
+        vqe_algorithm = VQE(ansatz=quick_ansatz, estimator=BackendEstimator(self.backend), optimizer=quick_optimizer, initial_point=initial_point)
 
         energy_min = vqe_algorithm.compute_minimum_eigenvalue(self.hamiltonian_qubit)
         energy_max = vqe_algorithm.compute_minimum_eigenvalue(-self.hamiltonian_qubit)
@@ -148,17 +155,36 @@ class BandCalQ():
         betas = np.zeros([2*self.orbital_number])
 
         for i in range(2*self.orbital_number):
-            betas[i] = 2*(energy_max - energy_min)
+            betas[i] = 2*(-np.real(energy_max.eigenvalue) - np.real(energy_min.eigenvalue))
         
         return betas
 
-    def compute_band_structure(self, momentum_range, momentum_points_amount):
+    def compute_band_structure(
+        self, 
+        momentum_range: float,
+        momentum_points_amount: int,
+    ) -> None:
+        '''Description'''
         dk = 2*momentum_range/(momentum_points_amount - 1)
-        momentum_array = np.zeros(momentum_points_amount)
+        self.momentum_array = np.zeros(momentum_points_amount)
         for i in range(momentum_points_amount):
-            momentum_array[i] = -momentum_range + dk*i
-        
-        
+            self.momentum_array[i] = -momentum_range + dk*i
+        self.eigenvalues_array = np.zeros((momentum_points_amount, 2*self.orbital_number))
+
+        #default parameters - modify to use setters
+        self.ansatz = EfficientSU2(self.orbital_number, su2_gates=['rx', 'rz', 'ry'], entanglement='full', reps=2)
+        self.optimizer = SPSA(maxiter=400)
+
+        for i in range(momentum_points_amount):
+            self.create_hamiltonian_qubit(self.momentum_array[i])
+            beta_parameters = self.get_betas()
+
+            vqd_algorithm = VQD(ansatz=self.ansatz, estimator=BackendEstimator(self.backend), optimizer=self.optimizer,
+                                fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number, betas=beta_parameters)
+            vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
+            self.eigenvalues_array[i,:] =   np.real(vqd_result.eigenvalues)
+
+        return
     # Methods to implement 
     def plot_band_structure():
         ...
