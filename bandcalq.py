@@ -162,11 +162,15 @@ class BandCalQ():
         momentum_points_amount: int,
     ) -> None:
         '''Description'''
-        dk = 2*momentum_range/(momentum_points_amount - 1)
+        self.momentum_range = momentum_range
+        self.momentum_points_amount = momentum_points_amount
         self.momentum_array = np.zeros(momentum_points_amount)
+        self.eigenvalues_array = np.zeros((momentum_points_amount, 2*self.orbital_number))
+
+        dk = 2*momentum_range/(momentum_points_amount - 1)
         for i in range(momentum_points_amount):
             self.momentum_array[i] = -momentum_range + dk*i
-        self.eigenvalues_array = np.zeros((momentum_points_amount, 2*self.orbital_number))
+        
 
         #default parameters - modify to use setters
         self.ansatz = EfficientSU2(self.orbital_number, su2_gates=['rx', 'rz', 'ry'], entanglement='full', reps=2)
