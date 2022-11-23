@@ -7,9 +7,6 @@ import cmath as cmt
 from qiskit.opflow import Z, I, X, Y, PauliOp, PauliSumOp
 #from qiskit.algorithms.eigensolvers import VQD
 from vqd_fixed import VQD
-#
-from qiskit.algorithms.eigensolvers import NumPyEigensolver
-#
 from qiskit.algorithms.minimum_eigensolvers import VQE
 from qiskit.algorithms.optimizers import Optimizer, Minimizer, SPSA
 from qiskit.algorithms.state_fidelities import ComputeUncompute
