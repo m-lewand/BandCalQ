@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import cmath as cmt
-
+import matplotlib.pyplot as plt
 from qiskit.opflow import Z, I, X, Y, PauliOp, PauliSumOp
 #from qiskit.algorithms.eigensolvers import VQD
 from vqd_fixed import VQD
@@ -164,12 +164,8 @@ class BandCalQ():
         '''Description'''
         self.momentum_range = momentum_range
         self.momentum_points_amount = momentum_points_amount
-        self.momentum_array = np.zeros(momentum_points_amount)
         self.eigenvalues_array = np.zeros((momentum_points_amount, 2*self.orbital_number))
-
-        dk = 2*momentum_range/(momentum_points_amount - 1)
-        for i in range(momentum_points_amount):
-            self.momentum_array[i] = -momentum_range + dk*i
+        self.momentum_array = np.linspace(-momentum_range/(np.pi/self.displacement), momentum_range/(np.pi/self.displacement), momentum_points_amount)
         
 
         #default parameters - modify to use setters
@@ -187,5 +183,8 @@ class BandCalQ():
 
         return
     # Methods to implement 
-    def plot_band_structure():
-        ...
+    def plot_band_structure(self):
+        
+        for i in range(2*self.orbital_number):
+            for j in range(self.momentum_points_amount):
+                plt.plot(self.momentum_array[i]/np.pi, )
