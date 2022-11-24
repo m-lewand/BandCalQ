@@ -58,7 +58,7 @@ class BandCalQ():
     ) -> float:
         return self.hopping_matrix[alpha][beta]
     
-    def create_hamiltonian(self, momentum) -> np.ndarray:
+    def create_hamiltonian(self, momentum: float) -> np.ndarray:
         hamiltonian = np.zeros((self.orbital_number, self.orbital_number), dtype=complex)
         for alpha in range(self.orbital_number):
             for beta in range(self.orbital_number):
@@ -164,7 +164,7 @@ class BandCalQ():
         '''Description'''
         self.momentum_range = momentum_range
         self.momentum_points_amount = momentum_points_amount
-        self.eigenvalues_array = np.zeros((momentum_points_amount, 2*self.orbital_number))
+        self.eigenvalues_array = np.zeros((2*self.orbital_number, momentum_points_amount))
         self.momentum_array = np.linspace(-momentum_range/(np.pi/self.displacement), momentum_range/(np.pi/self.displacement), momentum_points_amount)
         
 
@@ -179,12 +179,19 @@ class BandCalQ():
             vqd_algorithm = VQD(ansatz=self.ansatz, estimator=BackendEstimator(self.backend), optimizer=self.optimizer,
                                 fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number, betas=beta_parameters)
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
-            self.eigenvalues_array[i,:] =   np.real(vqd_result.eigenvalues)
+            self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
 
         return
-    # Methods to implement 
+ 
     def plot_band_structure(self):
         
+        plt.figure(1, figsize=(5,5))
+        plt.rcParams.update({'font.size' : 12})
         for i in range(2*self.orbital_number):
-            for j in range(self.momentum_points_amount):
-                plt.plot(self.momentum_array[i]/np.pi, )
+            plt.plot(self.momentum_array, self.eigenvalues_array[i], 
+                marker='o', markersize=4, mfc='white',linestyle='--')
+        plt.grid()
+        plt.xlabel('$k (\pi/a)$')
+        plt.ylabel('$E(E_h)$')
+        plt.show()
+        return
