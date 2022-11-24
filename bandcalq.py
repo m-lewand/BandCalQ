@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import cmath as cmt
+import math as mt
 import matplotlib.pyplot as plt
 from qiskit.opflow import Z, I, X, Y, PauliOp, PauliSumOp
 #from qiskit.algorithms.eigensolvers import VQD
@@ -172,7 +173,7 @@ class BandCalQ():
         self.ansatz = EfficientSU2(self.orbital_number, su2_gates=['rx', 'rz', 'ry'], entanglement='full', reps=2)
         self.optimizer = SPSA(maxiter=400)
 
-        for i in range(momentum_points_amount):
+        for i in range(mt.floor(momentum_points_amount/2), momentum_points_amount):
             self.create_hamiltonian_qubit(self.momentum_array[i])
             beta_parameters = self.get_betas()
 
@@ -180,7 +181,7 @@ class BandCalQ():
                                 fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number, betas=beta_parameters)
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
             self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
-
+            self.eigenvalues_array[:,momentum_points_amount-1-i] = np.real(vqd_result.eigenvalues)
         return
  
     def plot_band_structure(self):
