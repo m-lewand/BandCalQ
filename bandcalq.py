@@ -48,8 +48,28 @@ class BandCalQ():
         self.ansatz = ansatz
         self.optimizer = optimizer
         
-    # Implement getters and setters
-    #
+    @property
+    def ansatz(self):
+        return self._ansatz
+    
+    @property
+    def optimizer(self):
+        return self._optimizer
+
+    @ansatz.setter
+    def ansatz(self, arg):
+        if arg == None:
+            self.ansatz = EfficientSU2(self.orbital_number, su2_gates=['rx', 'rz', 'ry'], entanglement='full', reps=2)
+        else:
+            self._ansatz = arg
+
+    @optimizer.setter
+    def optimizer(self, arg):
+        if arg == None:
+            self._optimizer = SPSA(maxiter=400)
+        else:
+            self._optimizer = arg
+            
     
     def hopping(
         self,
@@ -172,9 +192,6 @@ class BandCalQ():
         if theoretical_points:
             self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
             solver = NumPyEigensolver(k=2*self.orbital_number)
-        #default parameters - modify to use setters
-        self.ansatz = EfficientSU2(self.orbital_number, su2_gates=['rx', 'rz', 'ry'], entanglement='full', reps=2)
-        self.optimizer = SPSA(maxiter=400)
         
         for i in range(self.momentum_points_amount):
             self.create_hamiltonian_qubit(self.momentum_array[i])
@@ -186,7 +203,7 @@ class BandCalQ():
                                 fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number, betas=beta_parameters)
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
             self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
-        
+            
         if theoretical_points:
             self.theory_computed = True
         else:
@@ -209,6 +226,7 @@ class BandCalQ():
         
         plt.figure(1, figsize=(5,5))
         plt.rcParams.update({'font.size' : 12})
+
         for i in range(2*self.orbital_number):
             if theoretical_points:
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
