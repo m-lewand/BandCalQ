@@ -8,6 +8,7 @@ from qiskit.opflow import Z, I, X, Y, PauliOp, PauliSumOp
 #from qiskit.algorithms.eigensolvers import VQD
 from vqd_fixed import VQD
 from qiskit.algorithms.minimum_eigensolvers import VQE
+from qiskit.algorithms import NumPyEigensolver
 from qiskit.algorithms.optimizers import Optimizer, Minimizer, SPSA
 from qiskit.algorithms.state_fidelities import ComputeUncompute
 from qiskit.circuit import QuantumCircuit
@@ -161,20 +162,24 @@ class BandCalQ():
         momentum_min: float,
         momentum_max: float,
         momentum_points_amount: int,
+        *,
+        theoretical_points: bool = False,
     ) -> None:
         '''Description'''
-        #self.momentum_range = momentum_range
         self.momentum_points_amount = momentum_points_amount
-        self.eigenvalues_array = np.zeros((2*self.orbital_number, momentum_points_amount))
+        self.eigenvalues_array = np.zeros((2*self.orbital_number, self.momentum_points_amount))
         self.momentum_array = np.linspace(momentum_min/(np.pi/self.displacement), momentum_max/(np.pi/self.displacement), momentum_points_amount)
-        
-
+        if theoretical_points:
+            self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
+            solver = NumPyEigensolver(k=2*self.orbital_number)
         #default parameters - modify to use setters
         self.ansatz = EfficientSU2(self.orbital_number, su2_gates=['rx', 'rz', 'ry'], entanglement='full', reps=2)
         self.optimizer = SPSA(maxiter=400)
         
-        for i in range(momentum_points_amount):
+        for i in range(self.momentum_points_amount):
             self.create_hamiltonian_qubit(self.momentum_array[i])
+            if theoretical_points:
+                self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
             beta_parameters = self.get_betas()
 
             vqd_algorithm = VQD(ansatz=self.ansatz, estimator=BackendEstimator(self.backend), optimizer=self.optimizer,
@@ -182,14 +187,36 @@ class BandCalQ():
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
             self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
         
+        if theoretical_points:
+            self.theory_computed = True
+        else:
+            self.theory_computed = False
         return
  
-    def plot_band_structure(self):
+    def plot_band_structure(
+        self,
+        *,
+        theoretical_points: bool=False,
+        ):
+        
+        if theoretical_points and not(self.theory_computed):
+            self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
+            solver = NumPyEigensolver(k=2*self.orbital_number)
+            for i in range(self.momentum_points_amount):
+                self.create_hamiltonian_qubit(self.momentum_array[i])
+                self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
+            self.theory_computed = True
         
         plt.figure(1, figsize=(5,5))
         plt.rcParams.update({'font.size' : 12})
         for i in range(2*self.orbital_number):
-            plt.plot(self.momentum_array, self.eigenvalues_array[i], 
+            if theoretical_points:
+                plt.plot(self.momentum_array, self.eigenvalues_array[i], 
+                marker='o', markersize=5, mfc='white', linestyle='None')
+                plt.plot(self.momentum_array, self.eigenvalues_array_theoretical[i], 
+                marker='v', markersize=3, color='k', linestyle='-', alpha=0.9)
+            else:
+                plt.plot(self.momentum_array, self.eigenvalues_array[i], 
                 marker='o', markersize=4, mfc='white',linestyle='--')
         plt.grid()
         plt.xlabel('$k (\pi/a)$')
