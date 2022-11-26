@@ -158,20 +158,21 @@ class BandCalQ():
 
     def compute_band_structure(
         self, 
-        momentum_range: float,
+        momentum_min: float,
+        momentum_max: float,
         momentum_points_amount: int,
     ) -> None:
         '''Description'''
-        self.momentum_range = momentum_range
+        #self.momentum_range = momentum_range
         self.momentum_points_amount = momentum_points_amount
         self.eigenvalues_array = np.zeros((2*self.orbital_number, momentum_points_amount))
-        self.momentum_array = np.linspace(-momentum_range/(np.pi/self.displacement), momentum_range/(np.pi/self.displacement), momentum_points_amount)
+        self.momentum_array = np.linspace(momentum_min/(np.pi/self.displacement), momentum_max/(np.pi/self.displacement), momentum_points_amount)
         
 
         #default parameters - modify to use setters
         self.ansatz = EfficientSU2(self.orbital_number, su2_gates=['rx', 'rz', 'ry'], entanglement='full', reps=2)
         self.optimizer = SPSA(maxiter=400)
-
+        
         for i in range(momentum_points_amount):
             self.create_hamiltonian_qubit(self.momentum_array[i])
             beta_parameters = self.get_betas()
@@ -180,7 +181,7 @@ class BandCalQ():
                                 fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number, betas=beta_parameters)
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
             self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
-
+        
         return
  
     def plot_band_structure(self):
