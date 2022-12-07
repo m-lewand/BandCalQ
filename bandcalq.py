@@ -26,7 +26,7 @@ class BandCalQ():
     def __init__(
         self,
         orbital_number: int,
-        displacement: float,
+        lattice_constant: float,
         hopping_matrix: np.ndarray,
         backend: BackendV1,
         *,
@@ -41,7 +41,7 @@ class BandCalQ():
         """
         
         self.orbital_number = orbital_number
-        self.displacement = displacement
+        self.lattice_constant = lattice_constant
         self.hopping_matrix = hopping_matrix
         self.backend = backend
         self.interacting_sites = interacting_sites
@@ -85,8 +85,8 @@ class BandCalQ():
             for beta in range(self.orbital_number):
                 for delta in range(1, self.interacting_sites + 1):
                     hamiltonian[alpha][beta] = hamiltonian[alpha][beta] + \
-                    self.hopping(alpha, beta, -delta)*cmt.exp(-1j*momentum*delta*self.displacement) + \
-                    self.hopping(alpha, beta, delta)*cmt.exp(1j*momentum*delta*self.displacement) 
+                    self.hopping(alpha, beta, -delta)*cmt.exp(-1j*momentum*delta*self.lattice_constant) + \
+                    self.hopping(alpha, beta, delta)*cmt.exp(1j*momentum*delta*self.lattice_constant) 
         return hamiltonian
 
     @classmethod
@@ -188,7 +188,7 @@ class BandCalQ():
         '''Description'''
         self.momentum_points_amount = momentum_points_amount
         self.eigenvalues_array = np.zeros((2*self.orbital_number, self.momentum_points_amount))
-        self.momentum_array = np.linspace(momentum_min/(np.pi/self.displacement), momentum_max/(np.pi/self.displacement), momentum_points_amount)
+        self.momentum_array = np.linspace(momentum_min/(np.pi/self.lattice_constant), momentum_max/(np.pi/self.lattice_constant), momentum_points_amount)
         if theoretical_points:
             self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
             solver = NumPyEigensolver(k=2*self.orbital_number)
