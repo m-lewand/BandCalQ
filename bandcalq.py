@@ -1,21 +1,17 @@
-
 from __future__ import annotations
 
 import numpy as np
 import cmath as cmt
 import matplotlib.pyplot as plt
-from qiskit.opflow import Z, I, X, Y, PauliOp, PauliSumOp
-#from qiskit.algorithms.eigensolvers import VQD
+from qiskit.opflow import Z, I, X, Y, PauliOp
 from vqd_fixed import VQD
-from qiskit.algorithms.minimum_eigensolvers import VQE
 from qiskit.algorithms import NumPyEigensolver
 from qiskit.algorithms.optimizers import Optimizer, Minimizer, SPSA
 from qiskit.algorithms.state_fidelities import ComputeUncompute
 from qiskit.circuit import QuantumCircuit
-from qiskit.circuit.library import EfficientSU2, TwoLocal
+from qiskit.circuit.library import EfficientSU2
 from qiskit.providers import BackendV1
 from qiskit.primitives import BackendEstimator, Sampler
-
 
 
 class BandCalQ():
@@ -156,26 +152,7 @@ class BandCalQ():
                 beta += 1
         
         self.hamiltonian_qubit = hamiltonian_qubit
-
         return
-    
-    def get_betas(self):
-        quick_ansatz = TwoLocal(self.orbital_number , rotation_blocks='ry', entanglement_blocks='cz', reps=2)
-        quick_optimizer = SPSA(maxiter=50)
-        
-        initial_point = np.random.random(quick_ansatz.num_parameters)
-        
-        vqe_algorithm = VQE(ansatz=quick_ansatz, estimator=BackendEstimator(self.backend), optimizer=quick_optimizer, initial_point=initial_point)
-
-        energy_min = vqe_algorithm.compute_minimum_eigenvalue(self.hamiltonian_qubit)
-        energy_max = vqe_algorithm.compute_minimum_eigenvalue(-self.hamiltonian_qubit)
-
-        betas = np.zeros([2*self.orbital_number])
-
-        for i in range(2*self.orbital_number):
-            betas[i] = 2*(-np.real(energy_max.eigenvalue) - np.real(energy_min.eigenvalue))
-        
-        return betas
 
     def compute_band_structure(
         self, 
@@ -197,10 +174,9 @@ class BandCalQ():
             self.create_hamiltonian_qubit(self.momentum_array[i])
             if theoretical_points:
                 self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
-            beta_parameters = self.get_betas()
 
             vqd_algorithm = VQD(ansatz=self.ansatz, estimator=BackendEstimator(self.backend), optimizer=self.optimizer,
-                                fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number, betas=beta_parameters)
+                                fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number)
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
             self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
             
