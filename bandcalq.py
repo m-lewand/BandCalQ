@@ -4,7 +4,7 @@ import numpy as np
 import cmath as cmt
 import matplotlib.pyplot as plt
 from qiskit.opflow import Z, I, X, Y, PauliOp
-from vqd_fixed import VQD
+from vqd_custom import VQD
 from qiskit.algorithms import NumPyEigensolver
 from qiskit.algorithms.optimizers import Optimizer, Minimizer, SPSA
 from qiskit.algorithms.state_fidelities import ComputeUncompute
