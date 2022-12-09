@@ -83,11 +83,6 @@ class VQD(VariationalAlgorithm, Eigensolver):
             optimizer(Optimizer): A classical optimizer. Can either be a Qiskit optimizer or a callable
                 that takes an array as input and returns a Qiskit or SciPy optimization result.
             k (int): the number of eigenvalues to return. Returns the lowest k eigenvalues.
-            betas (list[float]): Beta parameters in the VQD paper.
-                Should have length k - 1, with k the number of excited states.
-                These hyper-parameters balance the contribution of each overlap term to the cost
-                function and have a default value computed as the mean square sum of the
-                coefficients of the observable.
             initial point (list[float]): An optional initial point (i.e. initial parameter values)
                 for the optimizer. If ``None`` then VQD will look to the ansatz for a preferred
                 point and if not will simply compute a random one.
@@ -107,7 +102,6 @@ class VQD(VariationalAlgorithm, Eigensolver):
         optimizer: Optimizer | Minimizer,
         *,
         k: int = 2,
-        betas: Sequence[float]  |None = None,
         initial_point: Sequence[float] | None = None,
         callback: Callable[[int, np.ndarray, float, dict[str, Any]], None] | None = None,
     ) -> None:
@@ -119,11 +113,6 @@ class VQD(VariationalAlgorithm, Eigensolver):
             optimizer: A classical optimizer. Can either be a Qiskit optimizer or a callable
                 that takes an array as input and returns a Qiskit or SciPy optimization result.
             k: The number of eigenvalues to return. Returns the lowest k eigenvalues.
-            betas: Beta parameters in the VQD paper.
-                Should have length k - 1, with k the number of excited states.
-                These hyperparameters balance the contribution of each overlap term to the cost
-                function and have a default value computed as the mean square sum of the
-                coefficients of the observable.
             initial_point: An optional initial point (i.e. initial parameter values)
                 for the optimizer. If ``None`` then VQD will look to the ansatz for a preferred
                 point and if not will simply compute a random one.
@@ -140,7 +129,6 @@ class VQD(VariationalAlgorithm, Eigensolver):
         self.ansatz = ansatz
         self.optimizer = optimizer
         self.k = k
-        self.betas = betas
         # this has to go via getters and setters due to the VariationalAlgorithm interface
         self.initial_point = initial_point
         self.callback = callback
@@ -180,7 +168,6 @@ class VQD(VariationalAlgorithm, Eigensolver):
         operator: BaseOperator | PauliSumOp,
         aux_operators: ListOrDict[BaseOperator | PauliSumOp] | None = None,
     ) -> VQDResult:
-
         super().compute_eigenvalues(operator, aux_operators)
 
         # this sets the size of the ansatz, so it must be called before the initial point
@@ -212,20 +199,6 @@ class VQD(VariationalAlgorithm, Eigensolver):
         else:
             aux_operators = None
 
-        if self.betas is None:
-            if isinstance(operator, PauliSumOp):
-                upper_bound = abs(operator.coeff) * sum(
-                    abs(operation.coeff) for operation in operator
-                )
-                betas = [upper_bound * 10] * (self.k)
-                logger.info("beta autoevaluated to %s", betas[0])
-            else:
-                raise NotImplementedError(
-                    r"Beta autoevaluation is only supported for operators"
-                    f"of type PauliSumOp, found {type(operator)}."
-                )
-        else:
-            betas = self.betas
 
         result = self._build_vqd_result()
 
@@ -236,16 +209,58 @@ class VQD(VariationalAlgorithm, Eigensolver):
         # the same parameters to the ansatz if we do multiple steps
         prev_states = []
 
-        for step in range(1, self.k + 1):
+        
+
+        for step in range(1, self.k):
+            
+            if step == 1:
+                """calculating max state"""
+                self._eval_count = 0
+                energy_evaluation = self._get_evaluate_energy(
+                    step=step, operator=-operator, betas=[]
+                )
+                start_time = time()
+                if callable(self.optimizer):
+                    opt_result = self.optimizer(  # pylint: disable=not-callable
+                        fun=energy_evaluation, x0=initial_point, bounds=bounds
+                    )
+                else:
+                    opt_result = self.optimizer.minimize(
+                        fun=energy_evaluation, x0=initial_point, bounds=bounds
+                    )
+
+                eval_time = time() - start_time
+                result_max = self._build_vqd_result()
+                self._update_vqd_result(result_max, opt_result, eval_time, self.ansatz.copy())
+
+                if aux_operators is not None:
+                    aux_value = estimate_observables(
+                        self.estimator, self.ansatz, aux_operators, result.optimal_points[-1]
+                    )
+                    aux_values.append(aux_value)
+                
+                
+                logger.info(
+                    "Maximum state optimization complete in %s seconds.\n"
+                    "Found opt_params %s in %s evals",
+                    eval_time,
+                    result.optimal_points,
+                    self._eval_count,
+                )
 
             # update list of optimal circuits
             if step > 1:
                 prev_states.append(self.ansatz.bind_parameters(result.optimal_points[-1]))
 
             self._eval_count = 0
-            energy_evaluation = self._get_evaluate_energy(
-                step, operator, betas, prev_states=prev_states
-            )
+            if step == 1:
+                energy_evaluation = self._get_evaluate_energy(
+                    step, operator, betas=[]
+                )
+            else :
+                energy_evaluation = self._get_evaluate_energy(
+                    step, operator, betas, prev_states=prev_states
+                )
 
             start_time = time()
 
@@ -277,6 +292,10 @@ class VQD(VariationalAlgorithm, Eigensolver):
                     result.optimal_points,
                     self._eval_count,
                 )
+
+                betas = np.zeros([self.k - 2])
+                for i in range(self.k - 2):
+                    betas[i] = 2*(-np.real(result_max.eigenvalues[0]) - np.real(result.eigenvalues[0]))
             else:
                 logger.info(
                     (
@@ -288,6 +307,9 @@ class VQD(VariationalAlgorithm, Eigensolver):
                     result.optimal_points,
                     self._eval_count,
                 )
+        
+        # Appending result_max to  results
+        self._append_max_result(result, result_max)
 
         # To match the signature of EigensolverResult
         result.eigenvalues = np.array(result.eigenvalues)
@@ -398,6 +420,19 @@ class VQD(VariationalAlgorithm, Eigensolver):
         result.optimal_circuits.append(ansatz)
         return result
 
+    @staticmethod
+    def _append_max_result(result, result_max) -> VQDResult:
+
+        result.optimal_points.append(result_max.optimal_points[0])
+        result.optimal_parameters.append(result_max.optimal_parameters[0])
+        result.optimal_values.append(result_max.optimal_values[0])
+        result.cost_function_evals.append(result_max.cost_function_evals[0])
+        result.optimizer_times.append(result_max.optimizer_times[0])
+        result.eigenvalues.append(-result_max.eigenvalues[0])
+        result.optimizer_results.append(result_max.optimizer_results[0])
+        result.optimal_circuits.append(result_max.optimal_circuits[0])
+
+        return result
 
 class VQDResult(EigensolverResult):
     """VQD Result."""
