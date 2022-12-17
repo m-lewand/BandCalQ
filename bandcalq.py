@@ -202,13 +202,15 @@ class BandCalQ():
         
         plt.figure(1, figsize=(5,5))
         plt.rcParams.update({'font.size' : 12})
+        ax = plt.gca()
 
         for i in range(2*self.orbital_number):
             if theoretical_points:
+                color = next(ax._get_lines.prop_cycler)['color']
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
-                marker='o', markersize=5, mfc='white', linestyle='None')
+                marker='o', markersize=5, color=color,mfc='white', linestyle='None')
                 plt.plot(self.momentum_array, self.eigenvalues_array_theoretical[i], 
-                marker='v', markersize=3, color='k', linestyle='-', alpha=0.9)
+                marker='v', markersize=4, color=color, mfc='black', linestyle='-', alpha=0.9)
             else:
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
                 marker='o', markersize=4, mfc='white',linestyle='--')
