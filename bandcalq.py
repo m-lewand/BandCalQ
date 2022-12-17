@@ -190,6 +190,8 @@ class BandCalQ():
         self,
         *,
         theoretical_points: bool=False,
+        save_png: bool=False,
+        png_name: str=""
         ):
         
         if theoretical_points and not(self.theory_computed):
@@ -217,5 +219,12 @@ class BandCalQ():
         plt.grid()
         plt.xlabel('$k (\pi/a)$')
         plt.ylabel('$E(E_h)$')
+        if save_png:
+            fig = plt.gcf()
+            if png_name == '':
+               fig.savefig('band.png', format='png', dpi=1200, facecolor='w')
+            else:
+               fig.savefig(str(png_name)+'.png', format='png', dpi=1200, facecolor='w')  
+
         plt.show()
         return
