@@ -164,26 +164,32 @@ class BandCalQ():
     ) -> None:
         '''Description'''
         self.momentum_points_amount = momentum_points_amount
+        self.momentum_points_amount_theoretical = int(abs((momentum_max/(np.pi/self.lattice_constant)) - (momentum_min/(np.pi/self.lattice_constant)))*80)
         self.eigenvalues_array = np.zeros((2**self.orbital_number, self.momentum_points_amount))
-        self.momentum_array = np.linspace(momentum_min/(np.pi/self.lattice_constant), momentum_max/(np.pi/self.lattice_constant), momentum_points_amount)
-        if theoretical_points:
-            self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
-            solver = NumPyEigensolver(k=2**self.orbital_number)
-        
+        self.momentum_array = np.linspace(momentum_min/(np.pi/self.lattice_constant), momentum_max/(np.pi/self.lattice_constant),
+                                          self.momentum_points_amount)
+        self.momentum_array_theoretical = np.linspace(momentum_min/(np.pi/self.lattice_constant), momentum_max/(np.pi/self.lattice_constant), 
+                                                      self.momentum_points_amount_theoretical)                                  
+       
+
         for i in range(self.momentum_points_amount):
             self.create_hamiltonian_qubit(self.momentum_array[i])
-            if theoretical_points:
-                self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
-
+                
             vqd_algorithm = VQD(ansatz=self.ansatz, estimator=BackendEstimator(self.backend), optimizer=self.optimizer,
                                 fidelity=ComputeUncompute(sampler=Sampler()), k=2**self.orbital_number)
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
-            self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
-            
+            self.eigenvalues_array[:,i] = np.real(vqd_result.eigenvalues)
+
         if theoretical_points:
+            self.eigenvalues_array_theoretical = np.zeros((2**self.orbital_number, self.momentum_points_amount_theoretical))
+            solver = NumPyEigensolver(k=2**self.orbital_number)
+            for i in range(self.momentum_points_amount_theoretical):
+                self.create_hamiltonian_qubit(self.momentum_array_theoretical[i])
+                self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
             self.theory_computed = True
         else:
             self.theory_computed = False
+
         return
  
     def plot_band_structure(
@@ -194,11 +200,11 @@ class BandCalQ():
         png_name: str=""
         ):
         
-        if theoretical_points and not(self.theory_computed):
-            self.eigenvalues_array_theoretical = np.zeros((2**self.orbital_number, self.momentum_points_amount))
+        if theoretical_points:
+            self.eigenvalues_array_theoretical = np.zeros((2**self.orbital_number, self.momentum_points_amount_theoretical))
             solver = NumPyEigensolver(k=2**self.orbital_number)
-            for i in range(self.momentum_points_amount):
-                self.create_hamiltonian_qubit(self.momentum_array[i])
+            for i in range(self.momentum_points_amount_theoretical):
+                self.create_hamiltonian_qubit(self.momentum_array_theoretical[i])
                 self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
             self.theory_computed = True
         
@@ -210,15 +216,15 @@ class BandCalQ():
             if theoretical_points:
                 color = next(ax._get_lines.prop_cycler)['color']
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
-                marker='o', markersize=5, color=color,mfc='white', linestyle='None')
-                plt.plot(self.momentum_array, self.eigenvalues_array_theoretical[i], 
-                marker='v', markersize=4, color=color, mfc='black', linestyle='-', alpha=0.9)
+                marker='o', markersize=4, color=color,mfc='white', linestyle='None')
+                plt.plot(self.momentum_array_theoretical, self.eigenvalues_array_theoretical[i], 
+                color=color, mfc='black', linestyle='-', alpha=0.9)
             else:
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
                 marker='o', markersize=4, mfc='white',linestyle='--')
         plt.grid()
-        plt.xlabel('$k (\pi/a)$')
-        plt.ylabel('$E(E_h)$')
+        plt.xlabel('$k[\pi/a]$')
+        plt.ylabel('$E[Hartree]$')
         if save_png:
             fig = plt.gcf()
             if png_name == '':
