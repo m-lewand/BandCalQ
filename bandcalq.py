@@ -164,11 +164,11 @@ class BandCalQ():
     ) -> None:
         '''Description'''
         self.momentum_points_amount = momentum_points_amount
-        self.eigenvalues_array = np.zeros((2*self.orbital_number, self.momentum_points_amount))
+        self.eigenvalues_array = np.zeros((2**self.orbital_number, self.momentum_points_amount))
         self.momentum_array = np.linspace(momentum_min/(np.pi/self.lattice_constant), momentum_max/(np.pi/self.lattice_constant), momentum_points_amount)
         if theoretical_points:
             self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
-            solver = NumPyEigensolver(k=2*self.orbital_number)
+            solver = NumPyEigensolver(k=2**self.orbital_number)
         
         for i in range(self.momentum_points_amount):
             self.create_hamiltonian_qubit(self.momentum_array[i])
@@ -176,7 +176,7 @@ class BandCalQ():
                 self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
 
             vqd_algorithm = VQD(ansatz=self.ansatz, estimator=BackendEstimator(self.backend), optimizer=self.optimizer,
-                                fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number)
+                                fidelity=ComputeUncompute(sampler=Sampler()), k=2**self.orbital_number)
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
             self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
             
@@ -195,8 +195,8 @@ class BandCalQ():
         ):
         
         if theoretical_points and not(self.theory_computed):
-            self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
-            solver = NumPyEigensolver(k=2*self.orbital_number)
+            self.eigenvalues_array_theoretical = np.zeros((2**self.orbital_number, self.momentum_points_amount))
+            solver = NumPyEigensolver(k=2**self.orbital_number)
             for i in range(self.momentum_points_amount):
                 self.create_hamiltonian_qubit(self.momentum_array[i])
                 self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
@@ -206,7 +206,7 @@ class BandCalQ():
         plt.rcParams.update({'font.size' : 12})
         ax = plt.gca()
 
-        for i in range(2*self.orbital_number):
+        for i in range(2**self.orbital_number):
             if theoretical_points:
                 color = next(ax._get_lines.prop_cycler)['color']
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
