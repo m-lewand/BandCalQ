@@ -216,21 +216,40 @@ class BandCalQ():
             if theoretical_points:
                 color = next(ax._get_lines.prop_cycler)['color']
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
-                marker='o', markersize=4, color=color,mfc='white', linestyle='None')
+                marker='o', markersize=4, color=color,mfc='white', linestyle='None', label='VQD('+str(self.backend)+')')
                 plt.plot(self.momentum_array_theoretical, self.eigenvalues_array_theoretical[i], 
-                color=color, mfc='black', linestyle='-', alpha=0.9)
+                color=color, linestyle='-', alpha=0.9, label='Theoretical values(Numpy)')
             else:
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
-                marker='o', markersize=4, mfc='white',linestyle='--')
+                marker='o', markersize=4, mfc='white', linestyle='--', label='VQD('+str(self.backend)+')')
+
+        '''Creating legend that does not represent any specific band color'''
+        handles, labels = plt.gca().get_legend_handles_labels()
+        newLabels, newHandles = [], []
+        for handle, label in zip(handles, labels):
+            if label not in newLabels:
+                newLabels.append(label)
+                newHandles.append(handle)
+        newHandles[0].set_color('black')
+        if theoretical_points:
+            newHandles[1].set_color('black')
+        plt.legend(newHandles, newLabels, loc='upper right', prop={'size': 6})
+        handles[0].set_color('#1f77b4')
+        if theoretical_points:
+            handles[1].set_color('#1f77b4')
+        
         plt.grid()
         plt.xlabel('$k[\pi/a]$')
         plt.ylabel('$E[Hartree]$')
+
+        '''Plot saving'''
         if save_png:
             fig = plt.gcf()
             if png_name == '':
-               fig.savefig('band.png', format='png', dpi=1200, facecolor='w')
+               fig.savefig('band.png', format='png', dpi=1200, facecolor='w', bbox_inches = "tight")
             else:
-               fig.savefig(str(png_name)+'.png', format='png', dpi=1200, facecolor='w')  
+               fig.savefig(str(png_name)+'.png', format='png', dpi=1200, facecolor='w', bbox_inches = "tight")  
 
         plt.show()
+        
         return
