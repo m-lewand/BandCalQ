@@ -13,6 +13,7 @@ from qiskit.circuit.library import EfficientSU2
 from qiskit.providers import BackendV1
 from qiskit.primitives import BackendEstimator, Sampler
 
+from tqdm import tqdm
 
 class BandCalQ():
     """
@@ -146,7 +147,7 @@ class BandCalQ():
 
             while(beta < self.orbital_number):
                 hamiltonian_qubit += 0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(X, X, alpha, beta, self.orbital_number)) + \
-                0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(Y, Y, alpha, beta, self.orbital_number))# + \
+                0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(Y, Y, alpha, beta, self.orbital_number)) + \
                 0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(Y, X, alpha, beta, self.orbital_number)) - \
                 0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(X, Y, alpha, beta, self.orbital_number)) 
                 beta += 1
@@ -172,7 +173,7 @@ class BandCalQ():
                                                       self.momentum_points_amount_theoretical)                                  
        
 
-        for i in range(self.momentum_points_amount):
+        for i in tqdm(range(self.momentum_points_amount), desc='Momentum points'):
             self.create_hamiltonian_qubit(self.momentum_array[i])
                 
             vqd_algorithm = VQD(ansatz=self.ansatz, estimator=BackendEstimator(self.backend), optimizer=self.optimizer,
