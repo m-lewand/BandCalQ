@@ -13,6 +13,7 @@ from qiskit.circuit.library import EfficientSU2
 from qiskit.providers import BackendV1
 from qiskit.primitives import BackendEstimator, Sampler
 
+from tqdm import tqdm
 
 class BandCalQ():
     """
@@ -146,7 +147,7 @@ class BandCalQ():
 
             while(beta < self.orbital_number):
                 hamiltonian_qubit += 0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(X, X, alpha, beta, self.orbital_number)) + \
-                0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(Y, Y, alpha, beta, self.orbital_number))# + \
+                0.5*(hamiltonian[alpha][beta]).real*(self.operator_extended_two(Y, Y, alpha, beta, self.orbital_number)) + \
                 0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(Y, X, alpha, beta, self.orbital_number)) - \
                 0.5*(hamiltonian[alpha][beta]).imag*(self.operator_extended_two(X, Y, alpha, beta, self.orbital_number)) 
                 beta += 1
@@ -164,56 +165,92 @@ class BandCalQ():
     ) -> None:
         '''Description'''
         self.momentum_points_amount = momentum_points_amount
-        self.eigenvalues_array = np.zeros((2*self.orbital_number, self.momentum_points_amount))
-        self.momentum_array = np.linspace(momentum_min/(np.pi/self.lattice_constant), momentum_max/(np.pi/self.lattice_constant), momentum_points_amount)
-        if theoretical_points:
-            self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
-            solver = NumPyEigensolver(k=2*self.orbital_number)
-        
-        for i in range(self.momentum_points_amount):
-            self.create_hamiltonian_qubit(self.momentum_array[i])
-            if theoretical_points:
-                self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
+        self.momentum_points_amount_theoretical = int(abs((momentum_max/(np.pi/self.lattice_constant)) - (momentum_min/(np.pi/self.lattice_constant)))*80)
+        self.eigenvalues_array = np.zeros((2**self.orbital_number, self.momentum_points_amount))
+        self.momentum_array = np.linspace(momentum_min/(np.pi/self.lattice_constant), momentum_max/(np.pi/self.lattice_constant),
+                                          self.momentum_points_amount)
+        self.momentum_array_theoretical = np.linspace(momentum_min/(np.pi/self.lattice_constant), momentum_max/(np.pi/self.lattice_constant), 
+                                                      self.momentum_points_amount_theoretical)                                  
+       
 
+        for i in tqdm(range(self.momentum_points_amount), desc='Momentum points'):
+            self.create_hamiltonian_qubit(self.momentum_array[i])
+                
             vqd_algorithm = VQD(ansatz=self.ansatz, estimator=BackendEstimator(self.backend), optimizer=self.optimizer,
-                                fidelity=ComputeUncompute(sampler=Sampler()), k=2*self.orbital_number)
+                                fidelity=ComputeUncompute(sampler=Sampler()), k=2**self.orbital_number)
             vqd_result = vqd_algorithm.compute_eigenvalues(self.hamiltonian_qubit)
-            self.eigenvalues_array[:,i] =   np.real(vqd_result.eigenvalues)
-            
+            self.eigenvalues_array[:,i] = np.real(vqd_result.eigenvalues)
+
         if theoretical_points:
+            self.eigenvalues_array_theoretical = np.zeros((2**self.orbital_number, self.momentum_points_amount_theoretical))
+            solver = NumPyEigensolver(k=2**self.orbital_number)
+            for i in range(self.momentum_points_amount_theoretical):
+                self.create_hamiltonian_qubit(self.momentum_array_theoretical[i])
+                self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
             self.theory_computed = True
         else:
             self.theory_computed = False
+
         return
  
     def plot_band_structure(
         self,
         *,
         theoretical_points: bool=False,
+        save_png: bool=False,
+        png_name: str=""
         ):
         
-        if theoretical_points and not(self.theory_computed):
-            self.eigenvalues_array_theoretical = np.zeros((2*self.orbital_number, self.momentum_points_amount))
-            solver = NumPyEigensolver(k=2*self.orbital_number)
-            for i in range(self.momentum_points_amount):
-                self.create_hamiltonian_qubit(self.momentum_array[i])
+        if theoretical_points:
+            self.eigenvalues_array_theoretical = np.zeros((2**self.orbital_number, self.momentum_points_amount_theoretical))
+            solver = NumPyEigensolver(k=2**self.orbital_number)
+            for i in range(self.momentum_points_amount_theoretical):
+                self.create_hamiltonian_qubit(self.momentum_array_theoretical[i])
                 self.eigenvalues_array_theoretical[:,i] = solver.compute_eigenvalues(self.hamiltonian_qubit).eigenvalues
             self.theory_computed = True
         
         plt.figure(1, figsize=(5,5))
         plt.rcParams.update({'font.size' : 12})
+        ax = plt.gca()
 
-        for i in range(2*self.orbital_number):
+        for i in range(2**self.orbital_number):
             if theoretical_points:
+                color = next(ax._get_lines.prop_cycler)['color']
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
-                marker='o', markersize=5, mfc='white', linestyle='None')
-                plt.plot(self.momentum_array, self.eigenvalues_array_theoretical[i], 
-                marker='v', markersize=3, color='k', linestyle='-', alpha=0.9)
+                marker='o', markersize=4, color=color,mfc='white', linestyle='None', label='VQD('+str(self.backend)+')')
+                plt.plot(self.momentum_array_theoretical, self.eigenvalues_array_theoretical[i], 
+                color=color, linestyle='-', alpha=0.9, label='Theoretical values(Numpy)')
             else:
                 plt.plot(self.momentum_array, self.eigenvalues_array[i], 
-                marker='o', markersize=4, mfc='white',linestyle='--')
+                marker='o', markersize=4, mfc='white', linestyle='--', label='VQD('+str(self.backend)+')')
+
+        '''Creating legend that does not represent any specific band color'''
+        handles, labels = plt.gca().get_legend_handles_labels()
+        newLabels, newHandles = [], []
+        for handle, label in zip(handles, labels):
+            if label not in newLabels:
+                newLabels.append(label)
+                newHandles.append(handle)
+        newHandles[0].set_color('black')
+        if theoretical_points:
+            newHandles[1].set_color('black')
+        plt.legend(newHandles, newLabels, loc='upper right', prop={'size': 6})
+        handles[0].set_color('#1f77b4')
+        if theoretical_points:
+            handles[1].set_color('#1f77b4')
+        
         plt.grid()
-        plt.xlabel('$k (\pi/a)$')
-        plt.ylabel('$E(E_h)$')
+        plt.xlabel('$k[\pi/a]$')
+        plt.ylabel('$E[Hartree]$')
+
+        '''Plot saving'''
+        if save_png:
+            fig = plt.gcf()
+            if png_name == '':
+               fig.savefig('band.png', format='png', dpi=1200, facecolor='w', bbox_inches = "tight")
+            else:
+               fig.savefig(str(png_name)+'.png', format='png', dpi=1200, facecolor='w', bbox_inches = "tight")  
+
         plt.show()
+        
         return
