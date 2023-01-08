@@ -8,4 +8,4 @@ pip install bandcalq
 ```
 All dependencies are handled automatically.
 ## Usage
-Usage of the BandCalQ library is explained in provided Jupyter Notebooks - ``example_simple.ipynb`` and ``example_advanced.ipynb``.
+Usage of the BandCalQ library is explained in provided Jupyter Notebooks - ``example_simple.ipynb`` and ``example_advanced.ipynb`` that can be found in examples directory.
